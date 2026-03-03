@@ -15,6 +15,8 @@ MCP server ([Model Context Protocol](https://modelcontextprotocol.io)) providing
 - **51 tools** — full management of users, nodes, hosts, subscriptions, squads, HWID devices, and system
 - **3 resources** — real-time panel stats, node status, health checks
 - **5 prompts** — guided workflows for common tasks
+- **Readonly mode** — restrict to read-only operations for safe monitoring
+- **Caddy support** — `X-Api-Key` header for panels behind Caddy with custom path
 - **Type-safe** — built on [@remnawave/backend-contract](https://www.npmjs.com/package/@remnawave/backend-contract) for API route validation
 - **stdio transport** — works with Claude Desktop, Cursor, Windsurf, and any MCP-compatible client
 
@@ -36,10 +38,47 @@ npm run build
 
 Create a `.env` file or pass environment variables:
 
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `REMNAWAVE_BASE_URL` | Yes | Panel URL (e.g. `https://vpn.example.com`) |
+| `REMNAWAVE_API_TOKEN` | Yes | API token from panel settings |
+| `REMNAWAVE_API_KEY` | No | API key for Caddy reverse proxy authentication |
+| `REMNAWAVE_READONLY` | No | Set to `true` to enable readonly mode |
+
 ```env
 REMNAWAVE_BASE_URL=https://vpn.example.com
 REMNAWAVE_API_TOKEN=your-api-token-here
 ```
+
+### Caddy with Custom Path
+
+If your Remnawave panel is deployed behind [Caddy with a custom path and API key protection](https://docs.remnawave.com/docs/security/caddy-with-custom-path/), set the base URL to include the custom path and provide the API key:
+
+```env
+REMNAWAVE_BASE_URL=https://example.com/your-secret-path/api
+REMNAWAVE_API_KEY=your-caddy-api-key
+```
+
+The `X-Api-Key` header will be added to every request automatically.
+
+### Readonly Mode
+
+Set `REMNAWAVE_READONLY=true` to disable all write operations (create, update, delete, enable, disable, restart, revoke, reset). Only read/list tools will be registered.
+
+Useful for monitoring dashboards or shared environments where you want to prevent accidental changes.
+
+In readonly mode, the available tools are reduced from 51 to 21:
+
+| Category | Available tools |
+|----------|----------------|
+| Users | `users_list`, `users_get`, `users_get_by_username`, `users_get_by_short_uuid` |
+| Nodes | `nodes_list`, `nodes_get` |
+| Hosts | `hosts_list`, `hosts_get` |
+| System | all 8 tools (read-only by nature) |
+| Subscriptions | all 5 tools (read-only by nature) |
+| Config Profiles | all 2 tools (read-only by nature) |
+| Squads | `squads_list` |
+| HWID | `hwid_devices_list` |
 
 ### Usage with Claude Desktop
 
@@ -53,7 +92,9 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
       "args": ["/absolute/path/to/remnawave-mcp/dist/index.js"],
       "env": {
         "REMNAWAVE_BASE_URL": "https://vpn.example.com",
-        "REMNAWAVE_API_TOKEN": "your-api-token-here"
+        "REMNAWAVE_API_TOKEN": "your-api-token-here",
+        "REMNAWAVE_API_KEY": "your-caddy-api-key",
+        "REMNAWAVE_READONLY": "false"
       }
     }
   }
@@ -72,7 +113,9 @@ Add to `.cursor/mcp.json` or `.windsurf/mcp.json` in your project:
       "args": ["/absolute/path/to/remnawave-mcp/dist/index.js"],
       "env": {
         "REMNAWAVE_BASE_URL": "https://vpn.example.com",
-        "REMNAWAVE_API_TOKEN": "your-api-token-here"
+        "REMNAWAVE_API_TOKEN": "your-api-token-here",
+        "REMNAWAVE_API_KEY": "your-caddy-api-key",
+        "REMNAWAVE_READONLY": "false"
       }
     }
   }
@@ -92,94 +135,94 @@ Environment variables are passed via `.env` file or `docker-compose.yml`.
 
 #### Users (11 tools)
 
-| Tool | Description |
-|------|-------------|
-| `users_list` | List all users with pagination |
-| `users_get` | Get user by UUID |
-| `users_get_by_username` | Get user by username |
-| `users_get_by_short_uuid` | Get user by short UUID |
-| `users_create` | Create a new user |
-| `users_update` | Update user settings |
-| `users_delete` | Delete a user |
-| `users_enable` | Enable a disabled user |
-| `users_disable` | Disable a user |
-| `users_revoke_subscription` | Revoke subscription (regenerate link) |
-| `users_reset_traffic` | Reset traffic counter |
+| Tool | Description | Mode |
+|------|-------------|------|
+| `users_list` | List all users with pagination | read |
+| `users_get` | Get user by UUID | read |
+| `users_get_by_username` | Get user by username | read |
+| `users_get_by_short_uuid` | Get user by short UUID | read |
+| `users_create` | Create a new user | write |
+| `users_update` | Update user settings | write |
+| `users_delete` | Delete a user | write |
+| `users_enable` | Enable a disabled user | write |
+| `users_disable` | Disable a user | write |
+| `users_revoke_subscription` | Revoke subscription (regenerate link) | write |
+| `users_reset_traffic` | Reset traffic counter | write |
 
 #### Nodes (11 tools)
 
-| Tool | Description |
-|------|-------------|
-| `nodes_list` | List all nodes |
-| `nodes_get` | Get node by UUID |
-| `nodes_create` | Create a new node |
-| `nodes_update` | Update node settings |
-| `nodes_delete` | Delete a node |
-| `nodes_enable` | Enable a node |
-| `nodes_disable` | Disable a node |
-| `nodes_restart` | Restart a specific node |
-| `nodes_restart_all` | Restart all nodes |
-| `nodes_reset_traffic` | Reset node traffic counter |
-| `nodes_reorder` | Reorder nodes |
+| Tool | Description | Mode |
+|------|-------------|------|
+| `nodes_list` | List all nodes | read |
+| `nodes_get` | Get node by UUID | read |
+| `nodes_create` | Create a new node | write |
+| `nodes_update` | Update node settings | write |
+| `nodes_delete` | Delete a node | write |
+| `nodes_enable` | Enable a node | write |
+| `nodes_disable` | Disable a node | write |
+| `nodes_restart` | Restart a specific node | write |
+| `nodes_restart_all` | Restart all nodes | write |
+| `nodes_reset_traffic` | Reset node traffic counter | write |
+| `nodes_reorder` | Reorder nodes | write |
 
 #### Hosts (5 tools)
 
-| Tool | Description |
-|------|-------------|
-| `hosts_list` | List all hosts |
-| `hosts_get` | Get host by UUID |
-| `hosts_create` | Create a new host |
-| `hosts_update` | Update host settings |
-| `hosts_delete` | Delete a host |
+| Tool | Description | Mode |
+|------|-------------|------|
+| `hosts_list` | List all hosts | read |
+| `hosts_get` | Get host by UUID | read |
+| `hosts_create` | Create a new host | write |
+| `hosts_update` | Update host settings | write |
+| `hosts_delete` | Delete a host | write |
 
 #### System (8 tools)
 
-| Tool | Description |
-|------|-------------|
-| `system_stats` | Panel statistics (users, nodes, traffic, CPU, memory) |
-| `system_bandwidth_stats` | Bandwidth statistics |
-| `system_nodes_metrics` | Node metrics |
-| `system_nodes_statistics` | Node statistics |
-| `system_health` | Panel health check |
-| `system_metadata` | Panel version and metadata |
-| `system_generate_x25519` | Generate X25519 key pair |
-| `auth_status` | Check authentication status |
+| Tool | Description | Mode |
+|------|-------------|------|
+| `system_stats` | Panel statistics (users, nodes, traffic, CPU, memory) | read |
+| `system_bandwidth_stats` | Bandwidth statistics | read |
+| `system_nodes_metrics` | Node metrics | read |
+| `system_nodes_statistics` | Node statistics | read |
+| `system_health` | Panel health check | read |
+| `system_metadata` | Panel version and metadata | read |
+| `system_generate_x25519` | Generate X25519 key pair | read |
+| `auth_status` | Check authentication status | read |
 
 #### Subscriptions (5 tools)
 
-| Tool | Description |
-|------|-------------|
-| `subscriptions_list` | List all subscriptions |
-| `subscriptions_get_by_uuid` | Get subscription by UUID |
-| `subscriptions_get_by_username` | Get subscription by username |
-| `subscriptions_get_by_short_uuid` | Get subscription by short UUID |
-| `subscription_info` | Get subscription info |
+| Tool | Description | Mode |
+|------|-------------|------|
+| `subscriptions_list` | List all subscriptions | read |
+| `subscriptions_get_by_uuid` | Get subscription by UUID | read |
+| `subscriptions_get_by_username` | Get subscription by username | read |
+| `subscriptions_get_by_short_uuid` | Get subscription by short UUID | read |
+| `subscription_info` | Get subscription info | read |
 
 #### Config Profiles & Inbounds (2 tools)
 
-| Tool | Description |
-|------|-------------|
-| `config_profiles_list` | List config profiles |
-| `inbounds_list` | List all inbounds |
+| Tool | Description | Mode |
+|------|-------------|------|
+| `config_profiles_list` | List config profiles | read |
+| `inbounds_list` | List all inbounds | read |
 
 #### Internal Squads (6 tools)
 
-| Tool | Description |
-|------|-------------|
-| `squads_list` | List all squads |
-| `squads_create` | Create a squad |
-| `squads_update` | Update a squad |
-| `squads_delete` | Delete a squad |
-| `squads_add_users` | Add users to a squad |
-| `squads_remove_users` | Remove users from a squad |
+| Tool | Description | Mode |
+|------|-------------|------|
+| `squads_list` | List all squads | read |
+| `squads_create` | Create a squad | write |
+| `squads_update` | Update a squad | write |
+| `squads_delete` | Delete a squad | write |
+| `squads_add_users` | Add users to a squad | write |
+| `squads_remove_users` | Remove users from a squad | write |
 
 #### HWID Devices (3 tools)
 
-| Tool | Description |
-|------|-------------|
-| `hwid_devices_list` | List user's HWID devices |
-| `hwid_device_delete` | Delete a specific device |
-| `hwid_devices_delete_all` | Delete all user's devices |
+| Tool | Description | Mode |
+|------|-------------|------|
+| `hwid_devices_list` | List user's HWID devices | read |
+| `hwid_device_delete` | Delete a specific device | write |
+| `hwid_devices_delete_all` | Delete all user's devices | write |
 
 ### Resources
 
@@ -254,6 +297,8 @@ MCP-сервер ([Model Context Protocol](https://modelcontextprotocol.io)), п
 - **51 инструмент** — полное управление пользователями, нодами, хостами, подписками, группами, HWID-устройствами и системой
 - **3 ресурса** — статистика панели, статус нод, проверка здоровья в реальном времени
 - **5 промптов** — пошаговые сценарии для типичных задач
+- **Readonly-режим** — ограничение только чтением для безопасного мониторинга
+- **Поддержка Caddy** — заголовок `X-Api-Key` для панелей за Caddy с кастомным путём
 - **Type-safe** — построен на [@remnawave/backend-contract](https://www.npmjs.com/package/@remnawave/backend-contract) для валидации API-маршрутов
 - **stdio транспорт** — работает с Claude Desktop, Cursor, Windsurf и любым MCP-совместимым клиентом
 
@@ -275,10 +320,47 @@ npm run build
 
 Создайте файл `.env` или передайте переменные окружения:
 
+| Переменная | Обязательная | Описание |
+|------------|-------------|----------|
+| `REMNAWAVE_BASE_URL` | Да | URL панели (например `https://vpn.example.com`) |
+| `REMNAWAVE_API_TOKEN` | Да | API-токен из настроек панели |
+| `REMNAWAVE_API_KEY` | Нет | API-ключ для аутентификации через Caddy reverse proxy |
+| `REMNAWAVE_READONLY` | Нет | `true` для включения режима только чтения |
+
 ```env
 REMNAWAVE_BASE_URL=https://vpn.example.com
 REMNAWAVE_API_TOKEN=ваш-api-токен
 ```
+
+### Caddy с кастомным путём
+
+Если ваша панель Remnawave развёрнута за [Caddy с кастомным путём и защитой API-ключом](https://docs.remnawave.com/docs/security/caddy-with-custom-path/), укажите полный путь в base URL и предоставьте API-ключ:
+
+```env
+REMNAWAVE_BASE_URL=https://example.com/your-secret-path/api
+REMNAWAVE_API_KEY=ваш-caddy-api-ключ
+```
+
+Заголовок `X-Api-Key` будет автоматически добавляться к каждому запросу.
+
+### Режим Readonly
+
+Установите `REMNAWAVE_READONLY=true`, чтобы отключить все операции записи (создание, обновление, удаление, включение, отключение, перезапуск, отзыв, сброс). Будут зарегистрированы только инструменты чтения.
+
+Полезно для мониторинговых дашбордов или общих окружений, где нужно исключить случайные изменения.
+
+В readonly-режиме количество доступных инструментов сокращается с 51 до 21:
+
+| Категория | Доступные инструменты |
+|-----------|----------------------|
+| Пользователи | `users_list`, `users_get`, `users_get_by_username`, `users_get_by_short_uuid` |
+| Ноды | `nodes_list`, `nodes_get` |
+| Хосты | `hosts_list`, `hosts_get` |
+| Система | все 8 инструментов (только чтение по своей природе) |
+| Подписки | все 5 инструментов (только чтение по своей природе) |
+| Конфиг-профили | все 2 инструмента (только чтение по своей природе) |
+| Группы | `squads_list` |
+| HWID | `hwid_devices_list` |
 
 ### Использование с Claude Desktop
 
@@ -292,7 +374,9 @@ REMNAWAVE_API_TOKEN=ваш-api-токен
       "args": ["/абсолютный/путь/к/remnawave-mcp/dist/index.js"],
       "env": {
         "REMNAWAVE_BASE_URL": "https://vpn.example.com",
-        "REMNAWAVE_API_TOKEN": "ваш-api-токен"
+        "REMNAWAVE_API_TOKEN": "ваш-api-токен",
+        "REMNAWAVE_API_KEY": "ваш-caddy-api-ключ",
+        "REMNAWAVE_READONLY": "false"
       }
     }
   }
@@ -311,7 +395,9 @@ REMNAWAVE_API_TOKEN=ваш-api-токен
       "args": ["/абсолютный/путь/к/remnawave-mcp/dist/index.js"],
       "env": {
         "REMNAWAVE_BASE_URL": "https://vpn.example.com",
-        "REMNAWAVE_API_TOKEN": "ваш-api-токен"
+        "REMNAWAVE_API_TOKEN": "ваш-api-токен",
+        "REMNAWAVE_API_KEY": "ваш-caddy-api-ключ",
+        "REMNAWAVE_READONLY": "false"
       }
     }
   }
@@ -331,94 +417,94 @@ docker compose up -d
 
 #### Пользователи (11 инструментов)
 
-| Инструмент | Описание |
-|------------|----------|
-| `users_list` | Список пользователей с пагинацией |
-| `users_get` | Получить пользователя по UUID |
-| `users_get_by_username` | Получить пользователя по username |
-| `users_get_by_short_uuid` | Получить пользователя по short UUID |
-| `users_create` | Создать нового пользователя |
-| `users_update` | Обновить настройки пользователя |
-| `users_delete` | Удалить пользователя |
-| `users_enable` | Включить пользователя |
-| `users_disable` | Отключить пользователя |
-| `users_revoke_subscription` | Отозвать подписку (перегенерировать ссылку) |
-| `users_reset_traffic` | Сбросить счётчик трафика |
+| Инструмент | Описание | Режим |
+|------------|----------|-------|
+| `users_list` | Список пользователей с пагинацией | read |
+| `users_get` | Получить пользователя по UUID | read |
+| `users_get_by_username` | Получить пользователя по username | read |
+| `users_get_by_short_uuid` | Получить пользователя по short UUID | read |
+| `users_create` | Создать нового пользователя | write |
+| `users_update` | Обновить настройки пользователя | write |
+| `users_delete` | Удалить пользователя | write |
+| `users_enable` | Включить пользователя | write |
+| `users_disable` | Отключить пользователя | write |
+| `users_revoke_subscription` | Отозвать подписку (перегенерировать ссылку) | write |
+| `users_reset_traffic` | Сбросить счётчик трафика | write |
 
 #### Ноды (11 инструментов)
 
-| Инструмент | Описание |
-|------------|----------|
-| `nodes_list` | Список всех нод |
-| `nodes_get` | Получить ноду по UUID |
-| `nodes_create` | Создать новую ноду |
-| `nodes_update` | Обновить настройки ноды |
-| `nodes_delete` | Удалить ноду |
-| `nodes_enable` | Включить ноду |
-| `nodes_disable` | Отключить ноду |
-| `nodes_restart` | Перезапустить ноду |
-| `nodes_restart_all` | Перезапустить все ноды |
-| `nodes_reset_traffic` | Сбросить трафик ноды |
-| `nodes_reorder` | Переупорядочить ноды |
+| Инструмент | Описание | Режим |
+|------------|----------|-------|
+| `nodes_list` | Список всех нод | read |
+| `nodes_get` | Получить ноду по UUID | read |
+| `nodes_create` | Создать новую ноду | write |
+| `nodes_update` | Обновить настройки ноды | write |
+| `nodes_delete` | Удалить ноду | write |
+| `nodes_enable` | Включить ноду | write |
+| `nodes_disable` | Отключить ноду | write |
+| `nodes_restart` | Перезапустить ноду | write |
+| `nodes_restart_all` | Перезапустить все ноды | write |
+| `nodes_reset_traffic` | Сбросить трафик ноды | write |
+| `nodes_reorder` | Переупорядочить ноды | write |
 
 #### Хосты (5 инструментов)
 
-| Инструмент | Описание |
-|------------|----------|
-| `hosts_list` | Список всех хостов |
-| `hosts_get` | Получить хост по UUID |
-| `hosts_create` | Создать новый хост |
-| `hosts_update` | Обновить настройки хоста |
-| `hosts_delete` | Удалить хост |
+| Инструмент | Описание | Режим |
+|------------|----------|-------|
+| `hosts_list` | Список всех хостов | read |
+| `hosts_get` | Получить хост по UUID | read |
+| `hosts_create` | Создать новый хост | write |
+| `hosts_update` | Обновить настройки хоста | write |
+| `hosts_delete` | Удалить хост | write |
 
 #### Система (8 инструментов)
 
-| Инструмент | Описание |
-|------------|----------|
-| `system_stats` | Статистика панели (пользователи, ноды, трафик, CPU, память) |
-| `system_bandwidth_stats` | Статистика пропускной способности |
-| `system_nodes_metrics` | Метрики нод |
-| `system_nodes_statistics` | Статистика нод |
-| `system_health` | Проверка здоровья панели |
-| `system_metadata` | Версия и метаданные панели |
-| `system_generate_x25519` | Генерация пары ключей X25519 |
-| `auth_status` | Проверка статуса аутентификации |
+| Инструмент | Описание | Режим |
+|------------|----------|-------|
+| `system_stats` | Статистика панели (пользователи, ноды, трафик, CPU, память) | read |
+| `system_bandwidth_stats` | Статистика пропускной способности | read |
+| `system_nodes_metrics` | Метрики нод | read |
+| `system_nodes_statistics` | Статистика нод | read |
+| `system_health` | Проверка здоровья панели | read |
+| `system_metadata` | Версия и метаданные панели | read |
+| `system_generate_x25519` | Генерация пары ключей X25519 | read |
+| `auth_status` | Проверка статуса аутентификации | read |
 
 #### Подписки (5 инструментов)
 
-| Инструмент | Описание |
-|------------|----------|
-| `subscriptions_list` | Список всех подписок |
-| `subscriptions_get_by_uuid` | Подписка по UUID |
-| `subscriptions_get_by_username` | Подписка по username |
-| `subscriptions_get_by_short_uuid` | Подписка по short UUID |
-| `subscription_info` | Информация о подписке |
+| Инструмент | Описание | Режим |
+|------------|----------|-------|
+| `subscriptions_list` | Список всех подписок | read |
+| `subscriptions_get_by_uuid` | Подписка по UUID | read |
+| `subscriptions_get_by_username` | Подписка по username | read |
+| `subscriptions_get_by_short_uuid` | Подписка по short UUID | read |
+| `subscription_info` | Информация о подписке | read |
 
 #### Конфиг-профили и Inbounds (2 инструмента)
 
-| Инструмент | Описание |
-|------------|----------|
-| `config_profiles_list` | Список конфиг-профилей |
-| `inbounds_list` | Список всех inbounds |
+| Инструмент | Описание | Режим |
+|------------|----------|-------|
+| `config_profiles_list` | Список конфиг-профилей | read |
+| `inbounds_list` | Список всех inbounds | read |
 
 #### Внутренние группы (6 инструментов)
 
-| Инструмент | Описание |
-|------------|----------|
-| `squads_list` | Список групп |
-| `squads_create` | Создать группу |
-| `squads_update` | Обновить группу |
-| `squads_delete` | Удалить группу |
-| `squads_add_users` | Добавить пользователей в группу |
-| `squads_remove_users` | Убрать пользователей из группы |
+| Инструмент | Описание | Режим |
+|------------|----------|-------|
+| `squads_list` | Список групп | read |
+| `squads_create` | Создать группу | write |
+| `squads_update` | Обновить группу | write |
+| `squads_delete` | Удалить группу | write |
+| `squads_add_users` | Добавить пользователей в группу | write |
+| `squads_remove_users` | Убрать пользователей из группы | write |
 
 #### HWID-устройства (3 инструмента)
 
-| Инструмент | Описание |
-|------------|----------|
-| `hwid_devices_list` | Список устройств пользователя |
-| `hwid_device_delete` | Удалить конкретное устройство |
-| `hwid_devices_delete_all` | Удалить все устройства пользователя |
+| Инструмент | Описание | Режим |
+|------------|----------|-------|
+| `hwid_devices_list` | Список устройств пользователя | read |
+| `hwid_device_delete` | Удалить конкретное устройство | write |
+| `hwid_devices_delete_all` | Удалить все устройства пользователя | write |
 
 ### Ресурсы
 

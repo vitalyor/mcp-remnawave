@@ -11,6 +11,9 @@ export class RemnawaveClient {
             Authorization: `Bearer ${config.apiToken}`,
             'Content-Type': 'application/json',
         };
+        if (config.apiKey) {
+            this.headers['X-Api-Key'] = config.apiKey;
+        }
     }
 
     private async request<T = unknown>(

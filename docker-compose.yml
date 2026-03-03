@@ -6,4 +6,6 @@ services:
     environment:
       - REMNAWAVE_BASE_URL=${REMNAWAVE_BASE_URL}
       - REMNAWAVE_API_TOKEN=${REMNAWAVE_API_TOKEN}
+      - REMNAWAVE_API_KEY=${REMNAWAVE_API_KEY:-}
+      - REMNAWAVE_READONLY=${REMNAWAVE_READONLY:-false}
     restart: unless-stopped

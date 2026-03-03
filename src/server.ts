@@ -13,7 +13,7 @@ export function createServer(config: Config): McpServer {
 
     const client = new RemnawaveClient(config);
 
-    registerAllTools(server, client);
+    registerAllTools(server, client, config.readonly);
     registerAllResources(server, client);
     registerAllPrompts(server);
 

@@ -9,13 +9,13 @@ import { registerInboundTools } from './inbounds.js';
 import { registerSquadTools } from './squads.js';
 import { registerHwidTools } from './hwid.js';
 
-export function registerAllTools(server: McpServer, client: RemnawaveClient) {
-    registerUserTools(server, client);
-    registerNodeTools(server, client);
-    registerHostTools(server, client);
+export function registerAllTools(server: McpServer, client: RemnawaveClient, readonly: boolean) {
+    registerUserTools(server, client, readonly);
+    registerNodeTools(server, client, readonly);
+    registerHostTools(server, client, readonly);
     registerSystemTools(server, client);
     registerSubscriptionTools(server, client);
     registerInboundTools(server, client);
-    registerSquadTools(server, client);
-    registerHwidTools(server, client);
+    registerSquadTools(server, client, readonly);
+    registerHwidTools(server, client, readonly);
 }

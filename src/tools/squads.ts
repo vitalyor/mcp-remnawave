@@ -6,6 +6,7 @@ import { toolResult, toolError } from './helpers.js';
 export function registerSquadTools(
     server: McpServer,
     client: RemnawaveClient,
+    readonly: boolean,
 ) {
     server.tool(
         'squads_list',
@@ -20,6 +21,8 @@ export function registerSquadTools(
             }
         },
     );
+
+    if (readonly) return;
 
     server.tool(
         'squads_create',

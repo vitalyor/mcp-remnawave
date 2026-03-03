@@ -6,6 +6,7 @@ import { toolResult, toolError } from './helpers.js';
 export function registerHwidTools(
     server: McpServer,
     client: RemnawaveClient,
+    readonly: boolean,
 ) {
     server.tool(
         'hwid_devices_list',
@@ -22,6 +23,8 @@ export function registerHwidTools(
             }
         },
     );
+
+    if (readonly) return;
 
     server.tool(
         'hwid_device_delete',

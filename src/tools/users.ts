@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { RemnawaveClient } from '../client/index.js';
 import { toolResult, toolError } from './helpers.js';
 
-export function registerUserTools(server: McpServer, client: RemnawaveClient) {
+export function registerUserTools(server: McpServer, client: RemnawaveClient, readonly: boolean) {
     server.tool(
         'users_list',
         'List all Remnawave VPN users with pagination',
@@ -68,6 +68,8 @@ export function registerUserTools(server: McpServer, client: RemnawaveClient) {
             }
         },
     );
+
+    if (readonly) return;
 
     server.tool(
         'users_create',

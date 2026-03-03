@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { RemnawaveClient } from '../client/index.js';
 import { toolResult, toolError } from './helpers.js';
 
-export function registerHostTools(server: McpServer, client: RemnawaveClient) {
+export function registerHostTools(server: McpServer, client: RemnawaveClient, readonly: boolean) {
     server.tool(
         'hosts_list',
         'List all Remnawave hosts',
@@ -33,6 +33,8 @@ export function registerHostTools(server: McpServer, client: RemnawaveClient) {
             }
         },
     );
+
+    if (readonly) return;
 
     server.tool(
         'hosts_create',
