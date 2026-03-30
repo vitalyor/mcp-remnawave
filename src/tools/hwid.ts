@@ -24,7 +24,66 @@ export function registerHwidTools(
         },
     );
 
+    server.tool(
+        'hwid_devices_list_all',
+        'List all HWID devices across all users',
+        {},
+        async () => {
+            try {
+                const result = await client.getAllHwidDevices();
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'hwid_stats',
+        'Get HWID device statistics',
+        {},
+        async () => {
+            try {
+                const result = await client.getHwidStats();
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'hwid_top_users',
+        'Get users with most HWID devices',
+        {},
+        async () => {
+            try {
+                const result = await client.getHwidTopUsers();
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
     if (readonly) return;
+
+    server.tool(
+        'hwid_device_create',
+        'Create a HWID device entry for a user',
+        {
+            userUuid: z.string().describe('User UUID'),
+            hwid: z.string().describe('Hardware ID'),
+        },
+        async (params) => {
+            try {
+                const result = await client.createUserHwidDevice(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
 
     server.tool(
         'hwid_device_delete',

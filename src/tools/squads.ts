@@ -22,6 +22,22 @@ export function registerSquadTools(
         },
     );
 
+    server.tool(
+        'squads_accessible_nodes',
+        'Get nodes accessible to a specific squad',
+        {
+            uuid: z.string().describe('Squad UUID'),
+        },
+        async ({ uuid }) => {
+            try {
+                const result = await client.getSquadAccessibleNodes(uuid);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
     if (readonly) return;
 
     server.tool(

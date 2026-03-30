@@ -34,6 +34,20 @@ export function registerNodeTools(server: McpServer, client: RemnawaveClient, re
         },
     );
 
+    server.tool(
+        'nodes_tags_list',
+        'List all node tags',
+        {},
+        async () => {
+            try {
+                const result = await client.getNodeTags();
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
     if (readonly) return;
 
     server.tool(
@@ -256,6 +270,58 @@ export function registerNodeTools(server: McpServer, client: RemnawaveClient, re
         async ({ uuids }) => {
             try {
                 const result = await client.reorderNodes(uuids);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'nodes_bulk_profile_modification',
+        'Bulk modify config profile for selected nodes',
+        {
+            nodeUuids: z.array(z.string()).describe('Array of node UUIDs'),
+            configProfileUuid: z.string().describe('New config profile UUID'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkNodeProfileModification(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'nodes_bulk_actions',
+        'Bulk actions on selected nodes (enable/disable/restart)',
+        {
+            nodeUuids: z.array(z.string()).describe('Array of node UUIDs'),
+            action: z.enum(['enable', 'disable', 'restart']).describe('Action to perform'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkNodeActions(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'nodes_bulk_update',
+        'Bulk update properties for selected nodes',
+        {
+            nodeUuids: z.array(z.string()).describe('Array of node UUIDs'),
+            countryCode: z.string().optional().describe('New country code'),
+            consumptionMultiplier: z.number().optional().describe('New consumption multiplier'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkUpdateNodes(params);
                 return toolResult(result);
             } catch (e) {
                 return toolError(e);

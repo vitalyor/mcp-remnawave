@@ -8,6 +8,16 @@ import { registerSubscriptionTools } from './subscriptions.js';
 import { registerInboundTools } from './inbounds.js';
 import { registerSquadTools } from './squads.js';
 import { registerHwidTools } from './hwid.js';
+import { registerApiTokenTools } from './api-tokens.js';
+import { registerKeygenTools } from './keygen.js';
+import { registerInfraBillingTools } from './infra-billing.js';
+import { registerSnippetTools } from './snippets.js';
+import { registerExternalSquadTools } from './external-squads.js';
+import { registerSettingsTools } from './settings.js';
+import { registerSubPageConfigTools } from './subscription-page-configs.js';
+import { registerNodePluginTools } from './node-plugins.js';
+import { registerIpControlTools } from './ip-control.js';
+import { registerMetadataTools } from './metadata.js';
 
 export function registerAllTools(server: McpServer, client: RemnawaveClient, readonly: boolean) {
     registerUserTools(server, client, readonly);
@@ -15,7 +25,17 @@ export function registerAllTools(server: McpServer, client: RemnawaveClient, rea
     registerHostTools(server, client, readonly);
     registerSystemTools(server, client);
     registerSubscriptionTools(server, client);
-    registerInboundTools(server, client);
+    registerInboundTools(server, client, readonly);
     registerSquadTools(server, client, readonly);
     registerHwidTools(server, client, readonly);
+    registerApiTokenTools(server, client, readonly);
+    registerKeygenTools(server, client);
+    registerInfraBillingTools(server, client, readonly);
+    registerSnippetTools(server, client, readonly);
+    registerExternalSquadTools(server, client, readonly);
+    registerSettingsTools(server, client, readonly);
+    registerSubPageConfigTools(server, client, readonly);
+    registerNodePluginTools(server, client, readonly);
+    registerIpControlTools(server, client, readonly);
+    registerMetadataTools(server, client, readonly);
 }

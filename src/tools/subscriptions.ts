@@ -90,4 +90,49 @@ export function registerSubscriptionTools(
             }
         },
     );
+
+    server.tool(
+        'subscriptions_get_raw_by_short_uuid',
+        'Get raw subscription config by short UUID',
+        { shortUuid: z.string().describe('Short UUID') },
+        async ({ shortUuid }) => {
+            try { return toolResult(await client.getSubscriptionByShortUuidRaw(shortUuid)); } catch (e) { return toolError(e); }
+        },
+    );
+
+    server.tool(
+        'subscriptions_get_subpage_config',
+        'Get subscription page configuration',
+        { shortUuid: z.string().describe('Short UUID') },
+        async ({ shortUuid }) => {
+            try { return toolResult(await client.getSubscriptionSubpageConfig(shortUuid)); } catch (e) { return toolError(e); }
+        },
+    );
+
+    server.tool(
+        'subscriptions_get_connection_keys',
+        'Get connection keys for a subscription',
+        { uuid: z.string().describe('Subscription UUID') },
+        async ({ uuid }) => {
+            try { return toolResult(await client.getConnectionKeysByUuid(uuid)); } catch (e) { return toolError(e); }
+        },
+    );
+
+    server.tool(
+        'subscription_request_history_list',
+        'List subscription request history',
+        {},
+        async () => {
+            try { return toolResult(await client.getSubscriptionRequestHistory()); } catch (e) { return toolError(e); }
+        },
+    );
+
+    server.tool(
+        'subscription_request_history_stats',
+        'Get subscription request history statistics',
+        {},
+        async () => {
+            try { return toolResult(await client.getSubscriptionRequestHistoryStats()); } catch (e) { return toolError(e); }
+        },
+    );
 }

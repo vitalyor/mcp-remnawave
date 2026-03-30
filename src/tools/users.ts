@@ -69,6 +69,100 @@ export function registerUserTools(server: McpServer, client: RemnawaveClient, re
         },
     );
 
+    server.tool(
+        'users_get_by_telegram_id',
+        'Get a Remnawave user by their Telegram ID',
+        {
+            telegramId: z.string().describe('Telegram user ID'),
+        },
+        async ({ telegramId }) => {
+            try {
+                const result = await client.getUserByTelegramId(telegramId);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_get_by_email',
+        'Get a Remnawave user by their email',
+        {
+            email: z.string().describe('User email'),
+        },
+        async ({ email }) => {
+            try {
+                const result = await client.getUserByEmail(email);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_get_by_tag',
+        'Get Remnawave users by tag',
+        {
+            tag: z.string().describe('User tag'),
+        },
+        async ({ tag }) => {
+            try {
+                const result = await client.getUserByTag(tag);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_get_by_subscription_uuid',
+        'Get a Remnawave user by subscription UUID',
+        {
+            subscriptionUuid: z.string().describe('Subscription UUID'),
+        },
+        async ({ subscriptionUuid }) => {
+            try {
+                const result = await client.getUserBySubscriptionUuid(subscriptionUuid);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_tags_list',
+        'List all user tags',
+        {},
+        async () => {
+            try {
+                const result = await client.getUserTags();
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_resolve',
+        'Search and resolve users by query',
+        {
+            query: z.string().describe('Search query'),
+        },
+        async (params) => {
+            try {
+                const result = await client.resolveUsers(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
     if (readonly) return;
 
     server.tool(
@@ -230,6 +324,171 @@ export function registerUserTools(server: McpServer, client: RemnawaveClient, re
         async ({ uuid }) => {
             try {
                 const result = await client.resetUserTraffic(uuid);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_bulk_delete_by_status',
+        'Bulk delete users by status',
+        {
+            status: z.enum(['ACTIVE', 'DISABLED', 'LIMITED', 'EXPIRED']).describe('User status to delete'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkDeleteUsersByStatus(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_bulk_update',
+        'Bulk update selected users',
+        {
+            uuids: z.array(z.string()).describe('Array of user UUIDs to update'),
+            status: z.enum(['ACTIVE', 'DISABLED']).optional().describe('New status'),
+            expireAt: z.string().optional().describe('New expiration date (ISO 8601)'),
+            trafficLimitBytes: z.number().optional().describe('New traffic limit'),
+            trafficLimitStrategy: z.enum(['NO_RESET', 'DAY', 'WEEK', 'MONTH']).optional().describe('Traffic reset period'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkUpdateUsers(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_bulk_reset_traffic',
+        'Bulk reset traffic for selected users',
+        {
+            uuids: z.array(z.string()).describe('Array of user UUIDs'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkResetUsersTraffic(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_bulk_revoke_subscription',
+        'Bulk revoke subscriptions for selected users',
+        {
+            uuids: z.array(z.string()).describe('Array of user UUIDs'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkRevokeUsersSubscription(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_bulk_delete',
+        'Bulk delete selected users',
+        {
+            uuids: z.array(z.string()).describe('Array of user UUIDs to delete'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkDeleteUsers(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_bulk_update_squads',
+        'Bulk update squad assignments for selected users',
+        {
+            uuids: z.array(z.string()).describe('Array of user UUIDs'),
+            activeInternalSquads: z.array(z.string()).describe('Squad UUIDs to assign'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkUpdateUserSquads(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_bulk_extend_expiration',
+        'Bulk extend expiration date for selected users',
+        {
+            uuids: z.array(z.string()).describe('Array of user UUIDs'),
+            days: z.number().describe('Number of days to extend'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkExtendUsersExpiration(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_bulk_all_update',
+        'Update ALL users at once',
+        {
+            status: z.enum(['ACTIVE', 'DISABLED']).optional().describe('New status for all'),
+            expireAt: z.string().optional().describe('New expiration date for all'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkAllUpdateUsers(params);
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_bulk_all_reset_traffic',
+        'Reset traffic counters for ALL users',
+        {},
+        async () => {
+            try {
+                const result = await client.bulkAllResetUsersTraffic();
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'users_bulk_all_extend_expiration',
+        'Extend expiration date for ALL users',
+        {
+            days: z.number().describe('Number of days to extend'),
+        },
+        async (params) => {
+            try {
+                const result = await client.bulkAllExtendUsersExpiration(params);
                 return toolResult(result);
             } catch (e) {
                 return toolError(e);

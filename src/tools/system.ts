@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import { RemnawaveClient } from '../client/index.js';
 import { toolResult, toolError } from './helpers.js';
 
@@ -82,7 +83,7 @@ export function registerSystemTools(
         {},
         async () => {
             try {
-                const result = await client.getMetadata();
+                const result = await client.getSystemMetadata();
                 return toolResult(result);
             } catch (e) {
                 return toolError(e);
@@ -111,6 +112,36 @@ export function registerSystemTools(
         async () => {
             try {
                 const result = await client.getAuthStatus();
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'system_stats_recap',
+        'Get system statistics recap',
+        {},
+        async () => {
+            try {
+                const result = await client.getStatsRecap();
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
+    server.tool(
+        'system_srr_matcher',
+        'Test subscription request routing rules',
+        {
+            input: z.string().describe('Input string to test against SRR rules'),
+        },
+        async (params) => {
+            try {
+                const result = await client.testSrrMatcher(params);
                 return toolResult(result);
             } catch (e) {
                 return toolError(e);

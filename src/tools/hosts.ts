@@ -34,6 +34,20 @@ export function registerHostTools(server: McpServer, client: RemnawaveClient, re
         },
     );
 
+    server.tool(
+        'hosts_tags_list',
+        'List all host tags',
+        {},
+        async () => {
+            try {
+                const result = await client.getHostTags();
+                return toolResult(result);
+            } catch (e) {
+                return toolError(e);
+            }
+        },
+    );
+
     if (readonly) return;
 
     server.tool(
@@ -192,6 +206,58 @@ export function registerHostTools(server: McpServer, client: RemnawaveClient, re
             } catch (e) {
                 return toolError(e);
             }
+        },
+    );
+
+    server.tool(
+        'hosts_bulk_enable',
+        'Bulk enable selected hosts',
+        { uuids: z.array(z.string()).describe('Array of host UUIDs') },
+        async (params) => {
+            try { return toolResult(await client.bulkEnableHosts(params)); } catch (e) { return toolError(e); }
+        },
+    );
+
+    server.tool(
+        'hosts_bulk_disable',
+        'Bulk disable selected hosts',
+        { uuids: z.array(z.string()).describe('Array of host UUIDs') },
+        async (params) => {
+            try { return toolResult(await client.bulkDisableHosts(params)); } catch (e) { return toolError(e); }
+        },
+    );
+
+    server.tool(
+        'hosts_bulk_delete',
+        'Bulk delete selected hosts',
+        { uuids: z.array(z.string()).describe('Array of host UUIDs') },
+        async (params) => {
+            try { return toolResult(await client.bulkDeleteHosts(params)); } catch (e) { return toolError(e); }
+        },
+    );
+
+    server.tool(
+        'hosts_bulk_set_inbound',
+        'Bulk set inbound for selected hosts',
+        {
+            uuids: z.array(z.string()).describe('Array of host UUIDs'),
+            configProfileUuid: z.string().describe('Config profile UUID'),
+            configProfileInboundUuid: z.string().describe('Inbound UUID'),
+        },
+        async (params) => {
+            try { return toolResult(await client.bulkSetHostInbound(params)); } catch (e) { return toolError(e); }
+        },
+    );
+
+    server.tool(
+        'hosts_bulk_set_port',
+        'Bulk set port for selected hosts',
+        {
+            uuids: z.array(z.string()).describe('Array of host UUIDs'),
+            port: z.number().describe('New port number'),
+        },
+        async (params) => {
+            try { return toolResult(await client.bulkSetHostPort(params)); } catch (e) { return toolError(e); }
         },
     );
 }
