@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { RemnawaveClient } from '../client/index.js';
 import { toolResult, toolError } from './helpers.js';
 
+const SUBSCRIPTION_TYPES = ['XRAY_JSON', 'XRAY_BASE64', 'MIHOMO', 'STASH', 'CLASH', 'SINGBOX'] as const;
+
 export function registerHostTools(server: McpServer, client: RemnawaveClient, readonly: boolean) {
     server.tool(
         'hosts_list',
@@ -87,6 +89,10 @@ export function registerHostTools(server: McpServer, client: RemnawaveClient, re
                 .array(z.string())
                 .optional()
                 .describe('Array of node UUIDs to assign'),
+            excludeFromSubscriptionTypes: z
+                .array(z.enum(SUBSCRIPTION_TYPES))
+                .optional()
+                .describe('Subscription types to exclude this host from'),
         },
         async (params) => {
             try {
@@ -114,6 +120,8 @@ export function registerHostTools(server: McpServer, client: RemnawaveClient, re
                 if (params.serverDescription !== undefined)
                     body.serverDescription = params.serverDescription;
                 if (params.nodes !== undefined) body.nodes = params.nodes;
+                if (params.excludeFromSubscriptionTypes !== undefined)
+                    body.excludeFromSubscriptionTypes = params.excludeFromSubscriptionTypes;
 
                 const result = await client.createHost(body);
                 return toolResult(result);
@@ -165,6 +173,10 @@ export function registerHostTools(server: McpServer, client: RemnawaveClient, re
                 .string()
                 .optional()
                 .describe('New server description'),
+            excludeFromSubscriptionTypes: z
+                .array(z.enum(SUBSCRIPTION_TYPES))
+                .optional()
+                .describe('Subscription types to exclude this host from'),
         },
         async (params) => {
             try {
