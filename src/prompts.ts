@@ -16,10 +16,10 @@ export function registerAllPrompts(server: McpServer) {
                         type: 'text' as const,
                         text: `I want to create a new VPN user with username "${username}". Please guide me through the process:
 
-1. First, check if the username is already taken using users_get_by_username
-2. Get the list of available config profiles using config_profiles_list
-3. Get the list of available internal squads using squads_list
-4. Create the user with appropriate settings (ask me about traffic limit, expiration date, and which squads to assign)
+1. First, check if the username is already taken using get_user_by_username
+2. Get the list of available config profiles using get_config_profiles
+3. Get the list of available internal squads using get_internal_squads
+4. Create the user with create_user (ask me about traffic limit, expiration date, and which squads to assign)
 5. Confirm the user was created successfully and show the subscription URL`,
                     },
                 },
@@ -41,10 +41,10 @@ export function registerAllPrompts(server: McpServer) {
                         type: 'text' as const,
                         text: `Please run diagnostics on node ${nodeUuid}:
 
-1. Get node details using nodes_get
-2. Check system health using system_health
-3. Get node metrics using system_nodes_metrics
-4. Check bandwidth stats using system_bandwidth_stats
+1. Get node details using get_one_node
+2. Check system health using get_remnawave_health
+3. Get node metrics using get_nodes_metrics
+4. Check bandwidth stats using get_bandwidth_stats
 5. Summarize the node's status: connection state, xray version, uptime, traffic usage, online users
 6. Flag any issues found (offline, high traffic usage, errors)`,
                     },
@@ -57,19 +57,14 @@ export function registerAllPrompts(server: McpServer) {
         'traffic_report',
         'Generate a traffic usage report',
         {
-            startDate: z
-                .string()
-                .optional()
-                .describe('Start date (ISO 8601)'),
-            endDate: z
-                .string()
-                .optional()
-                .describe('End date (ISO 8601)'),
+            startDate: z.string().optional().describe('Start date (ISO 8601)'),
+            endDate: z.string().optional().describe('End date (ISO 8601)'),
         },
         async ({ startDate, endDate }) => {
-            const period = startDate && endDate
-                ? `from ${startDate} to ${endDate}`
-                : 'current';
+            const period =
+                startDate && endDate
+                    ? `from ${startDate} to ${endDate}`
+                    : 'current';
             return {
                 messages: [
                     {
@@ -78,10 +73,10 @@ export function registerAllPrompts(server: McpServer) {
                             type: 'text' as const,
                             text: `Generate a traffic report for the ${period} period:
 
-1. Get overall system stats using system_stats
-2. Get bandwidth statistics using system_bandwidth_stats
-3. Get node statistics using system_nodes_statistics
-4. List all users and their traffic using users_list
+1. Get overall system stats using get_stats
+2. Get bandwidth statistics using get_bandwidth_stats
+3. Get node statistics using get_nodes_statistics
+4. List all users and their traffic using get_all_users
 5. Provide a summary including:
    - Total traffic consumed
    - Per-node traffic breakdown
@@ -109,9 +104,9 @@ export function registerAllPrompts(server: McpServer) {
                         type: 'text' as const,
                         text: `Perform a complete audit of user ${uuid}:
 
-1. Get full user details using users_get
-2. Get subscription info using subscriptions_get_by_uuid
-3. Get HWID devices using hwid_devices_list
+1. Get full user details using get_user_by_uuid
+2. Get subscription info using get_subscription_by_uuid
+3. Get HWID devices using get_user_hwid_devices
 4. Summarize:
    - Account status and expiration
    - Traffic usage vs limit
@@ -137,15 +132,15 @@ export function registerAllPrompts(server: McpServer) {
                         type: 'text' as const,
                         text: `Help me clean up users:
 
-1. List all users using users_list with a large page size
+1. List all users using get_all_users with a large page size
 2. Identify:
    - Users with EXPIRED status
    - Users with DISABLED status
    - Users with LIMITED status (exceeded traffic)
    - Users who haven't connected recently
 3. Present the findings in a clear table
-4. Ask what action to take (disable, delete, extend, reset traffic)
-5. Execute the chosen action after confirmation`,
+4. Ask what action to take (disable_user, delete_user, bulk_extend_expiration_date, reset_user_traffic)
+5. Execute the chosen action only after my explicit confirmation`,
                     },
                 },
             ],
