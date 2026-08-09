@@ -52,9 +52,10 @@ export function registerAllResources(
 
     server.resource(
         'user-details',
-        new ResourceTemplate('remnawave://users/{uuid}', { list: undefined }),
+        new ResourceTemplate('remnawave://users/{userId}', { list: undefined }),
         {
-            description: 'Detailed information about a specific Remnawave user',
+            description:
+                'Detailed information about a specific Remnawave user by numeric user ID',
             mimeType: 'application/json',
         },
         async (uri, params) => ({
@@ -65,7 +66,7 @@ export function registerAllResources(
                     text: JSON.stringify(
                         await client.request(
                             'GET',
-                            `/api/users/${encodeURIComponent(String(params.uuid))}`,
+                            `/api/users/${encodeURIComponent(String(params.userId))}`,
                         ),
                         null,
                         2,

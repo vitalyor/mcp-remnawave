@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { Mode } from './config.js';
 
-// ponytail: api-1.json (Remnawave 2.8.1) is the single source of truth;
+// ponytail: api-1.json (Remnawave 3.2.2) is the single source of truth;
 // tools are generated from it at startup, so tools can't drift from the API.
+// The route keys in the tables below are validated against the spec at build
+// time by `npm run check`, so a spec update can't silently leave them stale.
 
 const EXCLUDED_TAGS = new Set([
     'Auth Controller',
@@ -30,11 +32,27 @@ const NAME_OVERRIDES: Record<string, string> = {
     'GET /api/node-plugins/{uuid}': 'get_node_plugin_by_uuid',
     'DELETE /api/node-plugins/{uuid}': 'delete_node_plugin',
     'GET /api/hwid/devices': 'get_all_hwid_devices',
-    'GET /api/bandwidth-stats/users/{uuid}': 'get_user_bandwidth_usage',
+    'GET /api/bandwidth-stats/users/{userId}': 'get_user_bandwidth_usage',
     'GET /api/bandwidth-stats/nodes': 'get_nodes_bandwidth_usage',
     'POST /api/bandwidth-stats/nodes/users': 'get_nodes_users_bandwidth_usage',
     'GET /api/bandwidth-stats/nodes/{uuid}/users':
         'get_node_users_bandwidth_usage',
+    'POST /api/bandwidth-stats/nodes/usage':
+        'get_users_exceeding_nodes_traffic',
+    'GET /api/bandwidth-stats/internal-squads/{uuid}/usage':
+        'get_internal_squad_bandwidth_usage',
+    'GET /api/bandwidth-stats/internal-squads/{squadUuid}/users/{userId}/usage':
+        'get_internal_squad_user_bandwidth_usage',
+    // Panel typo in operationId ("delte"), and clearer job-based names.
+    'DELETE /api/infra-billing/providers/{uuid}': 'delete_infra_provider',
+    'POST /api/connections/by-user/{userId}': 'request_user_connections',
+    'GET /api/connections/by-user/{jobId}': 'get_user_connections_result',
+    'POST /api/connections/by-node/{nodeUuid}': 'request_node_connections',
+    'GET /api/connections/by-node/{jobId}': 'get_node_connections_result',
+    'GET /api/subscriptions/by-id/{userId}': 'get_subscription_by_user_id',
+    'POST /api/nodes/bulk-actions/profile-modification':
+        'bulk_nodes_profile_modification',
+    'GET /api/hosts/{uuid}': 'get_host_by_uuid',
 };
 
 // POST endpoints that only read data — allowed in readonly mode.
@@ -42,6 +60,7 @@ const READONLY_POSTS = new Set([
     'POST /api/users/resolve',
     'POST /api/system/testers/srr-matcher',
     'POST /api/bandwidth-stats/nodes/users',
+    'POST /api/bandwidth-stats/nodes/usage',
 ]);
 
 // Irreversible / mass-impact operations: hidden in safe mode,
@@ -64,13 +83,23 @@ const DESTRUCTIVE_PATHS = new Set([
     'POST /api/node-plugins/executor',
     'POST /api/hwid/devices/delete',
     'POST /api/hwid/devices/delete-all',
-    'POST /api/ip-control/drop-connections',
+    'POST /api/connections/drop',
 ]);
 
 function isDestructive(method: string, path: string): boolean {
     if (method === 'DELETE') return true;
     if (path.startsWith('/api/users/bulk')) return true;
     return DESTRUCTIVE_PATHS.has(`${method} ${path}`);
+}
+
+// Route keys above that no longer exist in the spec. A renamed or removed
+// endpoint would otherwise silently lose its override or destructive flag.
+export function staleRouteKeys(seenRoutes: Set<string>): string[] {
+    return [
+        ...Object.keys(NAME_OVERRIDES),
+        ...READONLY_POSTS,
+        ...DESTRUCTIVE_PATHS,
+    ].filter((key) => !seenRoutes.has(key));
 }
 
 export interface ToolDef {
@@ -96,8 +125,9 @@ function snake(s: string): string {
     return s.replace(/(?<=[a-z0-9])([A-Z])/g, '_$1').toLowerCase();
 }
 
-// Inline all $refs (spec has no recursive schemas) and convert
-// OpenAPI 3.0 `nullable` to JSON Schema type arrays.
+// Inline all $refs (spec has no recursive schemas) and convert OpenAPI 3.0
+// quirks (`nullable`, boolean `exclusiveMinimum/Maximum`) to the JSON Schema
+// 2020-12 forms that MCP clients validate against.
 function normalize(schema: Schema, components: Record<string, Schema>): Schema {
     if (Array.isArray(schema)) {
         return schema.map((s) => normalize(s, components)) as any;
@@ -114,25 +144,59 @@ function normalize(schema: Schema, components: Record<string, Schema>): Schema {
                 ? normalize(v as Schema, components)
                 : v;
     }
-    if (out.nullable === true && typeof out.type === 'string') {
-        out.type = [out.type, 'null'];
+    if (out.nullable !== undefined) {
+        // Without a declared type, any value (incl. null) is already allowed.
+        if (out.nullable === true && typeof out.type === 'string') {
+            out.type = [out.type, 'null'];
+        }
         delete out.nullable;
+    }
+    for (const [flag, bound] of [
+        ['exclusiveMinimum', 'minimum'],
+        ['exclusiveMaximum', 'maximum'],
+    ] as const) {
+        if (out[flag] === true && typeof out[bound] === 'number') {
+            out[flag] = out[bound];
+            delete out[bound];
+        } else if (out[flag] === false) {
+            delete out[flag];
+        }
     }
     return out;
 }
 
-export function buildTools(): ToolDef[] {
-    const spec = JSON.parse(
+const HTTP_METHODS = ['get', 'post', 'patch', 'put', 'delete'];
+
+function loadSpec(): any {
+    return JSON.parse(
         readFileSync(new URL('../api-1.json', import.meta.url), 'utf8'),
     );
+}
+
+export function specVersion(): string {
+    return loadSpec().info?.version ?? 'unknown';
+}
+
+export function specRoutes(): Set<string> {
+    const routes = new Set<string>();
+    for (const [path, methods] of Object.entries<any>(loadSpec().paths)) {
+        for (const m of Object.keys(methods)) {
+            if (HTTP_METHODS.includes(m)) {
+                routes.add(`${m.toUpperCase()} ${path}`);
+            }
+        }
+    }
+    return routes;
+}
+
+export function buildTools(): ToolDef[] {
+    const spec = loadSpec();
     const components: Record<string, Schema> = spec.components?.schemas ?? {};
     const tools: ToolDef[] = [];
 
     for (const [path, methods] of Object.entries<any>(spec.paths)) {
         for (const [m, op] of Object.entries<any>(methods)) {
-            if (!['get', 'post', 'patch', 'put', 'delete'].includes(m)) {
-                continue;
-            }
+            if (!HTTP_METHODS.includes(m)) continue;
             const tag: string = op.tags?.[0] ?? '';
             if (EXCLUDED_TAGS.has(tag)) continue;
 

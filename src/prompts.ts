@@ -19,6 +19,7 @@ export function registerAllPrompts(server: McpServer) {
 1. First, check if the username is already taken using get_user_by_username
 2. Get the list of available config profiles using get_config_profiles
 3. Get the list of available internal squads using get_internal_squads
+   (users are identified by a numeric id in this API, not a UUID)
 4. Create the user with create_user (ask me about traffic limit, expiration date, and which squads to assign)
 5. Confirm the user was created successfully and show the subscription URL`,
                     },
@@ -41,7 +42,7 @@ export function registerAllPrompts(server: McpServer) {
                         type: 'text' as const,
                         text: `Please run diagnostics on node ${nodeUuid}:
 
-1. Get node details using get_one_node
+1. Get node details using get_node
 2. Check system health using get_remnawave_health
 3. Get node metrics using get_nodes_metrics
 4. Check bandwidth stats using get_bandwidth_stats
@@ -76,7 +77,7 @@ export function registerAllPrompts(server: McpServer) {
 1. Get overall system stats using get_stats
 2. Get bandwidth statistics using get_bandwidth_stats
 3. Get node statistics using get_nodes_statistics
-4. List all users and their traffic using get_all_users
+4. List all users and their traffic using get_users
 5. Provide a summary including:
    - Total traffic consumed
    - Per-node traffic breakdown
@@ -94,18 +95,18 @@ export function registerAllPrompts(server: McpServer) {
         'user_audit',
         'Complete audit of a specific user',
         {
-            uuid: z.string().describe('User UUID to audit'),
+            userId: z.string().describe('Numeric user ID to audit'),
         },
-        async ({ uuid }) => ({
+        async ({ userId }) => ({
             messages: [
                 {
                     role: 'user' as const,
                     content: {
                         type: 'text' as const,
-                        text: `Perform a complete audit of user ${uuid}:
+                        text: `Perform a complete audit of user ${userId}:
 
-1. Get full user details using get_user_by_uuid
-2. Get subscription info using get_subscription_by_uuid
+1. Get full user details using get_user_by_id
+2. Get subscription info using get_subscription_by_user_id
 3. Get HWID devices using get_user_hwid_devices
 4. Summarize:
    - Account status and expiration
@@ -132,14 +133,14 @@ export function registerAllPrompts(server: McpServer) {
                         type: 'text' as const,
                         text: `Help me clean up users:
 
-1. List all users using get_all_users with a large page size
+1. List all users using get_users with a large page size
 2. Identify:
    - Users with EXPIRED status
    - Users with DISABLED status
    - Users with LIMITED status (exceeded traffic)
    - Users who haven't connected recently
 3. Present the findings in a clear table
-4. Ask what action to take (disable_user, delete_user, bulk_extend_expiration_date, reset_user_traffic)
+4. Ask what action to take (disable_user, delete_user, extend_user_expiration_date, reset_user_traffic)
 5. Execute the chosen action only after my explicit confirmation`,
                     },
                 },
