@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { Mode } from './config.js';
 
-// ponytail: api-1.json (Remnawave 3.2.2) is the single source of truth;
+// api-1.json is the single source of truth;
 // tools are generated from it at startup, so tools can't drift from the API.
 // The route keys in the tables below are validated against the spec at build
 // time by `npm run check`, so a spec update can't silently leave them stale.
@@ -15,6 +15,19 @@ const EXCLUDED_TAGS = new Set([
 
 // Auto-derived names that collide or are unreadable, keyed by "METHOD path".
 const NAME_OVERRIDES: Record<string, string> = {
+    'GET /api/subscription-page-configs/tags': 'get_subscription_page_config_tags',
+    'PATCH /api/subscription-page-configs/tags': 'set_subscription_page_config_tags',
+    'GET /api/subscription-templates/tags': 'get_subscription_template_tags',
+    'PATCH /api/subscription-templates/tags': 'set_subscription_template_tags',
+    'GET /api/config-profiles/tags': 'get_config_profile_tags',
+    'PATCH /api/config-profiles/tags': 'set_config_profile_tags',
+    'GET /api/internal-squads/tags': 'get_internal_squad_tags',
+    'PATCH /api/internal-squads/tags': 'set_internal_squad_tags',
+    'GET /api/external-squads/tags': 'get_external_squad_tags',
+    'PATCH /api/external-squads/tags': 'set_external_squad_tags',
+    'GET /api/node-plugins/tags': 'get_node_plugin_tags',
+    'PATCH /api/node-plugins/tags': 'set_node_plugin_tags',
+    'GET /api/internal-squads/{uuid}/usage': 'get_internal_squad_usage',
     'GET /api/remnawave-settings': 'get_remnawave_settings',
     'PATCH /api/remnawave-settings': 'update_remnawave_settings',
     'GET /api/subscription-settings': 'get_subscription_settings',
@@ -84,6 +97,9 @@ const DESTRUCTIVE_PATHS = new Set([
     'POST /api/hwid/devices/delete',
     'POST /api/hwid/devices/delete-all',
     'POST /api/connections/drop',
+    'POST /api/snippets/actions/sync',
+    'POST /api/node-plugins/actions/sync',
+    'POST /api/node-plugins/shared-lists/actions/sync',
 ]);
 
 function isDestructive(method: string, path: string): boolean {
@@ -102,18 +118,42 @@ export function staleRouteKeys(seenRoutes: Set<string>): string[] {
     ].filter((key) => !seenRoutes.has(key));
 }
 
+// Exposed as first-class tools by default; everything else is reachable
+// through search_api / get_api_schema / call_api to keep tools/list small.
+export const CORE_TOOLS = [
+    'get_stats',
+    'get_users',
+    'get_user_by_id',
+    'get_user_by_username',
+    'create_user',
+    'update_user',
+    'enable_user',
+    'disable_user',
+    'extend_user_expiration_date',
+    'reset_user_traffic',
+    'revoke_user_subscription',
+    'get_nodes',
+    'get_node',
+    'get_hosts',
+    'get_internal_squads',
+];
+
 export interface ToolDef {
     name: string;
+    summary: string;
+    tag: string;
     description: string;
     inputSchema: {
         type: 'object';
         properties: Record<string, unknown>;
         required?: string[];
+        $defs?: Record<string, unknown>;
     };
     method: string;
     path: string;
     pathParams: string[];
     queryParams: string[];
+    deepObjectParams: string[];
     bodyProps: string[] | null;
     readOnly: boolean;
     destructive: boolean;
@@ -125,23 +165,28 @@ function snake(s: string): string {
     return s.replace(/(?<=[a-z0-9])([A-Z])/g, '_$1').toLowerCase();
 }
 
-// Inline all $refs (spec has no recursive schemas) and convert OpenAPI 3.0
+// Preserve references in local $defs, including recursive schemas, and convert OpenAPI 3.0
 // quirks (`nullable`, boolean `exclusiveMinimum/Maximum`) to the JSON Schema
 // 2020-12 forms that MCP clients validate against.
-function normalize(schema: Schema, components: Record<string, Schema>): Schema {
+function normalize(schema: Schema, components: Record<string, Schema>, defs: Record<string, Schema>): Schema {
     if (Array.isArray(schema)) {
-        return schema.map((s) => normalize(s, components)) as any;
+        return schema.map((s) => normalize(s, components, defs)) as any;
     }
     if (typeof schema !== 'object' || schema === null) return schema;
     if (schema.$ref) {
         const name = schema.$ref.split('/').pop()!;
-        return normalize(components[name], components);
+        if (!components[name]) throw new Error(`Unknown schema reference: ${schema.$ref}`);
+        if (!Object.hasOwn(defs, name)) {
+            defs[name] = {};
+            defs[name] = normalize(components[name], components, defs);
+        }
+        return { $ref: `#/$defs/${name}` };
     }
     const out: Schema = {};
     for (const [k, v] of Object.entries(schema)) {
         out[k] =
             typeof v === 'object' && v !== null
-                ? normalize(v as Schema, components)
+                ? normalize(v as Schema, components, defs)
                 : v;
     }
     if (out.nullable !== undefined) {
@@ -206,13 +251,15 @@ export function buildTools(): ToolDef[] {
                 NAME_OVERRIDES[key] ?? snake(op.operationId.split('_')[1]);
 
             const properties: Record<string, unknown> = {};
+            const defs: Record<string, Schema> = {};
             const required: string[] = [];
             const pathParams: string[] = [];
             const queryParams: string[] = [];
+            const deepObjectParams: string[] = [];
 
             for (const p of op.parameters ?? []) {
                 properties[p.name] = {
-                    ...normalize(p.schema ?? {}, components),
+                    ...normalize(p.schema ?? {}, components, defs),
                     ...(p.description ? { description: p.description } : {}),
                 };
                 if (p.in === 'path') {
@@ -220,6 +267,7 @@ export function buildTools(): ToolDef[] {
                     required.push(p.name);
                 } else {
                     queryParams.push(p.name);
+                    if (p.style === 'deepObject') deepObjectParams.push(p.name);
                     if (p.required) required.push(p.name);
                 }
             }
@@ -228,7 +276,11 @@ export function buildTools(): ToolDef[] {
             const bodySchema =
                 op.requestBody?.content?.['application/json']?.schema;
             if (bodySchema) {
-                const body = normalize(bodySchema, components);
+                const body = normalize(
+                    bodySchema.$ref ? components[bodySchema.$ref.split('/').pop()!] : bodySchema,
+                    components,
+                    defs,
+                );
                 bodyProps = Object.keys(body.properties ?? {});
                 Object.assign(properties, body.properties ?? {});
                 required.push(...(body.required ?? []));
@@ -246,16 +298,20 @@ export function buildTools(): ToolDef[] {
 
             tools.push({
                 name,
+                summary: op.summary ?? '',
+                tag: tag.replace(' Controller', ''),
                 description,
                 inputSchema: {
                     type: 'object',
                     properties,
+                    ...(Object.keys(defs).length ? { $defs: defs } : {}),
                     ...(required.length ? { required } : {}),
                 },
                 method,
                 path,
                 pathParams,
                 queryParams,
+                deepObjectParams,
                 bodyProps,
                 readOnly,
                 destructive,
@@ -277,4 +333,23 @@ export function filterByMode(tools: ToolDef[], mode: Mode): ToolDef[] {
     if (mode === 'readonly') return tools.filter((t) => t.readOnly);
     if (mode === 'safe') return tools.filter((t) => !t.destructive);
     return tools;
+}
+
+// ponytail: substring scoring over name/path/tag/summary, fine for ~200 ops;
+// swap for embeddings only if search quality becomes a real problem.
+export function searchTools(tools: ToolDef[], query: string, limit: number): ToolDef[] {
+    const words = query.toLowerCase().split(/[\s_\-/]+/).filter(Boolean);
+    return tools
+        .map((t) => {
+            const name = t.name.replace(/_/g, ' ');
+            const meta = `${t.path} ${t.tag}`.toLowerCase();
+            const text = t.summary.toLowerCase();
+            const score = words.reduce((sum, w) =>
+                sum + (name.includes(w) ? 3 : 0) + (meta.includes(w) ? 2 : 0) + (text.includes(w) ? 1 : 0), 0);
+            return { t, score };
+        })
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score || a.t.name.length - b.t.name.length)
+        .slice(0, limit)
+        .map((x) => x.t);
 }

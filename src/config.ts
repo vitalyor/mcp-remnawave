@@ -1,3 +1,5 @@
+import { CORE_TOOLS } from './tools.js';
+
 export type Mode = 'readonly' | 'safe' | 'full';
 
 export interface Config {
@@ -5,6 +7,10 @@ export interface Config {
     apiToken: string;
     apiKey?: string;
     mode: Mode;
+    // Names exposed as first-class tools, or 'all' for the full catalog.
+    tools: string[] | 'all';
+    maxResponseChars: number;
+    timeoutMs: number;
 }
 
 export function loadConfig(): Config {
@@ -31,10 +37,24 @@ export function loadConfig(): Config {
         );
     }
 
+    const tools = process.env.REMNAWAVE_TOOLS?.trim();
     return {
         baseUrl: baseUrl.replace(/\/+$/, ''),
         apiToken,
         apiKey,
         mode,
+        tools: tools === 'all' ? 'all' : tools ? tools.split(',').map((t) => t.trim()) : CORE_TOOLS,
+        maxResponseChars: positiveInt('REMNAWAVE_MAX_RESPONSE_CHARS', 40000),
+        timeoutMs: positiveInt('REMNAWAVE_TIMEOUT_MS', 30000),
     };
+}
+
+function positiveInt(name: string, fallback: number): number {
+    const raw = process.env[name];
+    if (raw === undefined) return fallback;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n <= 0) {
+        throw new Error(`${name} must be a positive integer, got "${raw}"`);
+    }
+    return n;
 }

@@ -1,78 +1,60 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
+// Operations that aren't in the tool list are reached through call_api.
+const NOTE = '\n\nIf a named operation is not in your tool list, call it via call_api(name, args).';
+
+function prompt(text: string) {
+    return {
+        messages: [{ role: 'user' as const, content: { type: 'text' as const, text: text + NOTE } }],
+    };
+}
+
 export function registerAllPrompts(server: McpServer) {
-    server.prompt(
+    server.registerPrompt(
         'create_user_wizard',
-        'Step-by-step guide to create a new VPN user',
         {
-            username: z.string().describe('Username for the new user'),
+            description: 'Step-by-step guide to create a new VPN user',
+            argsSchema: { username: z.string().describe('Username for the new user') },
         },
-        async ({ username }) => ({
-            messages: [
-                {
-                    role: 'user' as const,
-                    content: {
-                        type: 'text' as const,
-                        text: `I want to create a new VPN user with username "${username}". Please guide me through the process:
+        ({ username }) => prompt(`I want to create a new VPN user with username "${username}". Please guide me through the process:
 
 1. First, check if the username is already taken using get_user_by_username
 2. Get the list of available config profiles using get_config_profiles
 3. Get the list of available internal squads using get_internal_squads
    (users are identified by a numeric id in this API, not a UUID)
 4. Create the user with create_user (ask me about traffic limit, expiration date, and which squads to assign)
-5. Confirm the user was created successfully and show the subscription URL`,
-                    },
-                },
-            ],
-        }),
+5. Confirm the user was created successfully and show the subscription URL`),
     );
 
-    server.prompt(
+    server.registerPrompt(
         'node_diagnostics',
-        'Diagnose issues with a specific node',
         {
-            nodeUuid: z.string().describe('UUID of the node to diagnose'),
+            description: 'Diagnose issues with a specific node',
+            argsSchema: { nodeUuid: z.string().describe('UUID of the node to diagnose') },
         },
-        async ({ nodeUuid }) => ({
-            messages: [
-                {
-                    role: 'user' as const,
-                    content: {
-                        type: 'text' as const,
-                        text: `Please run diagnostics on node ${nodeUuid}:
+        ({ nodeUuid }) => prompt(`Please run diagnostics on node ${nodeUuid}:
 
 1. Get node details using get_node
 2. Check system health using get_remnawave_health
 3. Get node metrics using get_nodes_metrics
 4. Check bandwidth stats using get_bandwidth_stats
 5. Summarize the node's status: connection state, xray version, uptime, traffic usage, online users
-6. Flag any issues found (offline, high traffic usage, errors)`,
-                    },
-                },
-            ],
-        }),
+6. Flag any issues found (offline, high traffic usage, errors)`),
     );
 
-    server.prompt(
+    server.registerPrompt(
         'traffic_report',
-        'Generate a traffic usage report',
         {
-            startDate: z.string().optional().describe('Start date (ISO 8601)'),
-            endDate: z.string().optional().describe('End date (ISO 8601)'),
+            description: 'Generate a traffic usage report',
+            argsSchema: {
+                startDate: z.string().optional().describe('Start date (ISO 8601)'),
+                endDate: z.string().optional().describe('End date (ISO 8601)'),
+            },
         },
-        async ({ startDate, endDate }) => {
-            const period =
-                startDate && endDate
-                    ? `from ${startDate} to ${endDate}`
-                    : 'current';
-            return {
-                messages: [
-                    {
-                        role: 'user' as const,
-                        content: {
-                            type: 'text' as const,
-                            text: `Generate a traffic report for the ${period} period:
+        ({ startDate, endDate }) => prompt(`Generate a traffic report for the ${
+            startDate && endDate ? `from ${startDate} to ${endDate}` : 'current'
+        } period:
 
 1. Get overall system stats using get_stats
 2. Get bandwidth statistics using get_bandwidth_stats
@@ -83,27 +65,16 @@ export function registerAllPrompts(server: McpServer) {
    - Per-node traffic breakdown
    - Top users by traffic consumption
    - Users who exceeded their traffic limits
-   - Users with expired subscriptions`,
-                        },
-                    },
-                ],
-            };
-        },
+   - Users with expired subscriptions`),
     );
 
-    server.prompt(
+    server.registerPrompt(
         'user_audit',
-        'Complete audit of a specific user',
         {
-            userId: z.string().describe('Numeric user ID to audit'),
+            description: 'Complete audit of a specific user',
+            argsSchema: { userId: z.string().describe('Numeric user ID to audit') },
         },
-        async ({ userId }) => ({
-            messages: [
-                {
-                    role: 'user' as const,
-                    content: {
-                        type: 'text' as const,
-                        text: `Perform a complete audit of user ${userId}:
+        ({ userId }) => prompt(`Perform a complete audit of user ${userId}:
 
 1. Get full user details using get_user_by_id
 2. Get subscription info using get_subscription_by_user_id
@@ -114,24 +85,13 @@ export function registerAllPrompts(server: McpServer) {
    - Subscription URL and last access
    - Connected devices (HWID)
    - Squad memberships
-   - Any issues or concerns`,
-                    },
-                },
-            ],
-        }),
+   - Any issues or concerns`),
     );
 
-    server.prompt(
+    server.registerPrompt(
         'bulk_user_cleanup',
-        'Find and manage expired or inactive users',
-        {},
-        async () => ({
-            messages: [
-                {
-                    role: 'user' as const,
-                    content: {
-                        type: 'text' as const,
-                        text: `Help me clean up users:
+        { description: 'Find and manage expired or inactive users' },
+        () => prompt(`Help me clean up users:
 
 1. List all users using get_users with a large page size
 2. Identify:
@@ -141,10 +101,6 @@ export function registerAllPrompts(server: McpServer) {
    - Users who haven't connected recently
 3. Present the findings in a clear table
 4. Ask what action to take (disable_user, delete_user, extend_user_expiration_date, reset_user_traffic)
-5. Execute the chosen action only after my explicit confirmation`,
-                    },
-                },
-            ],
-        }),
+5. Execute the chosen action only after my explicit confirmation`),
     );
 }
