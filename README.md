@@ -10,7 +10,7 @@
 
 MCP server ([Model Context Protocol](https://modelcontextprotocol.io)) providing LLM clients (Claude Desktop, Cursor, Windsurf, etc.) with tools to manage a [Remnawave](https://github.com/remnawave/) VPN panel.
 
-**Version:** 3.4.7 | **Remnawave API:** 3.4.7
+**Version:** 3.4.8 | **Remnawave API:** 3.4.8
 
 ### How it works
 
@@ -20,7 +20,7 @@ All tools are **generated at startup directly from the panel's OpenAPI spec** ([
 
 ### Features
 
-- **199 operations** — every admin operation of Remnawave 3.4.7: users (incl. bulk), nodes, hosts, subscriptions, templates, squads (internal/external), HWID, config profiles, inbounds, billing, snippets, settings, subscription page configs, node plugins, connections, bandwidth stats, metadata
+- **199 operations** — every admin operation of Remnawave 3.4.8: users (incl. bulk), nodes, hosts, subscriptions, templates, squads (internal/external), HWID, config profiles, inbounds, billing, snippets, settings, subscription page configs, node plugins, connections, bandwidth stats, metadata
 - **Access modes** — `readonly` (89 tools), `safe` (149 tools, no destructive operations), `full` (all 199)
 - **Honest MCP annotations** — every tool carries `readOnlyHint`/`destructiveHint`; destructive operations tell the agent to confirm with you first, and `call_api` refuses them without `confirm: true`
 - **4 resources** — real-time panel stats, node status, health checks
@@ -173,7 +173,7 @@ MIT
 
 MCP-сервер ([Model Context Protocol](https://modelcontextprotocol.io)), предоставляющий LLM-клиентам (Claude Desktop, Cursor, Windsurf и др.) инструменты для управления VPN-панелью [Remnawave](https://github.com/remnawave/).
 
-**Версия:** 3.4.7 | **Remnawave API:** 3.4.7
+**Версия:** 3.4.8 | **Remnawave API:** 3.4.8
 
 ### Как это устроено
 
@@ -183,7 +183,7 @@ MCP-сервер ([Model Context Protocol](https://modelcontextprotocol.io)), п
 
 ### Возможности
 
-- **199 операций** — все админские операции Remnawave 3.4.7: пользователи (вкл. массовые), ноды, хосты, подписки, шаблоны, группы (внутренние/внешние), HWID, конфиг-профили, inbounds, биллинг, сниппеты, настройки, страницы подписок, плагины нод, соединения, статистика трафика, метаданные
+- **199 операций** — все админские операции Remnawave 3.4.8: пользователи (вкл. массовые), ноды, хосты, подписки, шаблоны, группы (внутренние/внешние), HWID, конфиг-профили, inbounds, биллинг, сниппеты, настройки, страницы подписок, плагины нод, соединения, статистика трафика, метаданные
 - **Режимы доступа** — `readonly` (89 тулов), `safe` (149 тулов, без деструктивных операций), `full` (все 199)
 - **Честные MCP-аннотации** — каждый тул несёт `readOnlyHint`/`destructiveHint`; деструктивные операции требуют от агента подтверждения у вас, а `call_api` не выполнит их без `confirm: true`
 - **4 ресурса** — статистика панели, статус нод, health-check в реальном времени
@@ -327,6 +327,10 @@ scripts/
 ### Лицензия
 
 MIT
+
+## 3.4.8 — API 3.4.8 compatibility
+
+Remnawave API 3.4.8 spec. Routes and schemas are unchanged from 3.4.7; the panel release only contains security fixes and dependency updates.
 
 ## 3.4.7 — token-lean refactor
 
